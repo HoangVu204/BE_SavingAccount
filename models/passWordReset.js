@@ -22,6 +22,7 @@ const PasswordReset = sequelize.define('PasswordReset', {
 }, {
   timestamps: true,
   updatedAt: false,
+  tableName: 'PasswordResets',
 });
 
 module.exports = PasswordReset;

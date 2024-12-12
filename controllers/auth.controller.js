@@ -1,4 +1,6 @@
 const User = require('../models/user.models.js');
+const  Role = require('../models/role.model.js');
+const UserRoles = require('../models/UserRoles.model.js')
 const PasswordReset = require('../models/passWordReset.js');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -8,6 +10,7 @@ const { generateToken } = require('../config/jwtConfig');
 
 
 //[POST] /auth/register
+
 const registerUser = async (req, res) => {
   const { name, email, password, dateOfBirth, phoneNumber, province, city, address, country } = req.body;
 
@@ -20,26 +23,33 @@ const registerUser = async (req, res) => {
     if (userExists) {
       return res.status(400).json({ message: 'Email already exists' });
     }
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      dateOfBirth,     
-      phoneNumber,    
-      province,      
-      city,            
-      address,        
-      country,         
+      dateOfBirth,
+      phoneNumber,
+      province,
+      city,
+      address,
+      country,
     });
 
-    const token = generateToken({ id: user.id, email: user.email });
+    const userRole = await Role.findOne({ where: { name: 'user' } });
+
+    await UserRoles.create({
+      userId: user.id,
+      roleId: userRole.id
+    });
+
+
+    const token = generateToken({ id: user.id, email: user.email, roles: ['user'] });
 
     res.status(201).json({ message: 'Registration successful', token });
   } catch (error) {
-    res.status(500).json({ message:  'Registration failed' , error });
+    res.status(500).json({ message: 'Registration failed', error });
   }
 };
 
@@ -106,6 +116,9 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: 'An error occurred while resetting the password.', error });
   }
 };
+
+
+
 
 const profile = (req, res) => {
   res.status(200).json({ message: 'You are authenticated!', user: req.user });

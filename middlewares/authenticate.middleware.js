@@ -1,4 +1,5 @@
 const { verifyToken } = require('../config/jwtConfig');
+const { sequelize } = require('../config/dbConfig');
 
 const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -9,6 +10,7 @@ const authenticate = (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
+    
     req.user = decoded;
     next();
   } catch (error) {

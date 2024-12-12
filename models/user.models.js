@@ -1,6 +1,7 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const {sequelize} = require('../config/dbConfig');
-const bcrypt = require('bcrypt');
+// const Role = require('./role.model');
+// const UserRoles = require('./UserRoles.model');
 
 const User = sequelize.define('User', {
   id: {
@@ -23,11 +24,11 @@ const User = sequelize.define('User', {
   },
   dateOfBirth: {
     type: DataTypes.DATE,
-    allowNull: true, // có thể cho phép trường này rỗng
+    allowNull: true,
   },
   phoneNumber: {
     type: DataTypes.STRING(15),
-    allowNull: true, // có thể cho phép trường này rỗng
+    allowNull: true,
   },
   province: {
     type: DataTypes.STRING,
@@ -47,6 +48,8 @@ const User = sequelize.define('User', {
   },
 }, {
   timestamps: true,
+  tableName: 'Users',
 });
+
 
 module.exports = User;
