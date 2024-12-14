@@ -36,12 +36,17 @@ const createSavingAccount = async (req, res) => {
   }
 };
 
-const getAccount = async (req, res) =>{
+
+// [GET] /accounts/:userId?skip=0&limit=10
+const getAccount = async (req, res) => {
   try {
     const { userId } = req.params; 
+    const { skip = 0, limit = 10 } = req.query;
 
     const accounts = await SavingAccount.findAll({
       where: { UserID: userId }, 
+      offset: parseInt(skip),
+      limit: parseInt(limit), 
     });
 
     if (accounts.length === 0) {
@@ -51,6 +56,10 @@ const getAccount = async (req, res) =>{
     return res.status(200).json({
       message: 'Saving accounts found successfully!',
       accounts,
+      pagination: {
+        skip: parseInt(skip),
+        limit: parseInt(limit),
+      }
     });
   } catch (error) {
     console.error('Error fetching saving accounts:', error);
