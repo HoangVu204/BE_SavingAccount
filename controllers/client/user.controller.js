@@ -1,19 +1,18 @@
-const User = require('../models/user.models.js');
-const  Role = require('../models/role.model.js');
-const UserRoles = require('../models/UserRoles.model.js')
-const PasswordReset = require('../models/passWordReset.js');
+const User = require('../../models/user.models.js');
+const  Role = require('../../models/role.model.js');
+const UserRoles = require('../../models/UserRoles.model.js')
+const PasswordReset = require('../../models/passWordReset.js');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { generateOtp } = require('../services/otp.service.js');
-const { sendMail } = require('../config/mailConfig.js');
-const { generateToken } = require('../config/jwtConfig');
+const { generateOtp } = require('../../services/otp.service.js');
+const { sendMail } = require('../../config/mailConfig.js');
+const { generateToken } = require('../../config/jwtConfig.js');
 
 
 //[POST] /auth/register
 
 const registerUser = async (req, res) => {
   const { name, email, password, dateOfBirth, phoneNumber, province, city, address, country } = req.body;
-
   if (!name || !email || !password) {
     return res.status(400).json({ message: 'Please provide all required information' });
   }
@@ -24,6 +23,8 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Email already exists' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    const userRole = await Role.findOne({ where: { name: 'user' } });
 
     const user = await User.create({
       name,
@@ -36,9 +37,6 @@ const registerUser = async (req, res) => {
       address,
       country,
     });
-
-    const userRole = await Role.findOne({ where: { name: 'user' } });
-
     await UserRoles.create({
       userId: user.id,
       roleId: userRole.id
@@ -120,8 +118,27 @@ const resetPassword = async (req, res) => {
 
 
 
-const profile = (req, res) => {
-  res.status(200).json({ message: 'You are authenticated!', user: req.user });
+const profile = async (req, res) => {
+  // res.status(200).json({ message: 'You are authenticated!', user: req.user });
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ['password'] }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.status(200).json({
+      message: 'User profile retrieved successfully',
+      user
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
 };
 
 

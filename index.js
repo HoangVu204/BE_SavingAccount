@@ -2,7 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const { connectDB }  = require('./config/dbConfig');
-const authRoutes = require('./routes/auth.route')
+const adminRoutes = require('./routes/admin/index.route')
+const clientRoutes = require('./routes/client/index.route')
 
 
 const app = express();
@@ -17,7 +18,8 @@ app.use(express.json());
 
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api', clientRoutes);
 
 
 

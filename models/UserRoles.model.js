@@ -1,7 +1,7 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const { sequelize } = require('../config/dbConfig');
-const User = require('../models/user.models.js');
-const  Role = require('../models/role.model.js');
+const User = require('./user.models.js');
+const  Role = require('./role.model.js');
 
 const UserRoles = sequelize.define('UserRoles', {
   userId: {
@@ -25,7 +25,7 @@ const UserRoles = sequelize.define('UserRoles', {
   tableName: 'UserRoles',
 });
 
-User.belongsToMany(Role, { through: UserRoles, foreignKey: 'userId' });
-Role.belongsToMany(User, { through: UserRoles, foreignKey: 'roleId' });
+// User.belongsToMany(Role, { through: UserRoles, foreignKey: 'userId' });
+// Role.belongsToMany(User, { through: UserRoles, foreignKey: 'roleId' });
 
 module.exports = UserRoles;
