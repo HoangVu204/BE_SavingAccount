@@ -36,4 +36,26 @@ const createSavingAccount = async (req, res) => {
   }
 };
 
-module.exports = {createSavingAccount}
+const getAccount = async (req, res) =>{
+  try {
+    const { userId } = req.params; 
+
+    const accounts = await SavingAccount.findAll({
+      where: { UserID: userId }, 
+    });
+
+    if (accounts.length === 0) {
+      return res.status(404).json({ error: 'No saving accounts found for this user!' });
+    }
+
+    return res.status(200).json({
+      message: 'Saving accounts found successfully!',
+      accounts,
+    });
+  } catch (error) {
+    console.error('Error fetching saving accounts:', error);
+    return res.status(500).json({ error: 'An error occurred while fetching saving accounts.' });
+  }
+};
+
+module.exports = {createSavingAccount, getAccount}
