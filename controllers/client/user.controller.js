@@ -142,6 +142,12 @@ const profile = async (req, res) => {
 };
 
 
+//[POST] /create
+const createSavingAccount = async (req, res) => {
+
+}
 
 
-module.exports = { registerUser, loginUser, sendOtp, resetPassword, profile};
+
+
+module.exports = { registerUser, loginUser, sendOtp, resetPassword, profile, createSavingAccount};
