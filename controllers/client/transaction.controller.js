@@ -108,4 +108,36 @@ const withdrawMoney = async (req, res) => {
   }
 };
 
+const processWithdrawal = async (AccountID, Amount, Description, res, account, interest = 0, remainingBalance = 0) => {
+  await sequelize.transaction(async (t) => {
+    // Tạo giao dịch
+    const transaction = await Transaction.create({
+      AccountID,
+      TransactionDate: new Date(),
+    }, { transaction: t });
+
+    // Tạo chi tiết giao dịch
+    await TransactionDetail.create({
+      TransactionID: transaction.TransactionID,
+      TransactionType: 'Withdrawal',
+      Amount,
+      Description,
+    }, { transaction: t });
+
+    // Cập nhật số dư
+    if (remainingBalance <= 0) {
+      account.Status = 'closed'; // Đóng tài khoản nếu rút hết tiền
+    } else {
+      account.Balance = remainingBalance + interest;
+    }
+    await account.save({ transaction: t });
+
+    const message = remainingBalance <= 0
+      ? 'Withdrawal successful. Your account is now closed.'
+      : 'Withdrawal successful.';
+
+    res.status(201).json({ message, interest, remainingBalance: account.Balance });
+  });
+};
+
 module.exports = {depositMoney , withdrawMoney}
