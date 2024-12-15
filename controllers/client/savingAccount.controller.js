@@ -37,7 +37,7 @@ const createSavingAccount = async (req, res) => {
 };
 
 
-// [GET] /accounts/:userId?skip=0&limit=10
+// [GET] /saving-account/:userId?skip=0&limit=10
 const getAccount = async (req, res) => {
   try {
     const { userId } = req.params; 

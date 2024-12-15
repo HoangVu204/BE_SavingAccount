@@ -36,6 +36,7 @@ const registerUser = async (req, res) => {
       city,
       address,
       country,
+      avatar: avatar || null,
     });
     await UserRoles.create({
       userId: user.id,
@@ -141,13 +142,47 @@ const profile = async (req, res) => {
   }
 };
 
+const editProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, dateOfBirth, phoneNumber, province, city, address, country } = req.body;
 
-//[POST] /create
-const createSavingAccount = async (req, res) => {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
+    let avatarPath = user.avatar;
+    if (req.file) {
+      if (user.avatar) {
+        const oldAvatarPath = path.join(__dirname, '../avatars', user.avatar);
+        if (fs.existsSync(oldAvatarPath)) {
+          fs.unlinkSync(oldAvatarPath); 
+        }
+      }
+      avatarPath = req.file.filename;
+    }
+
+    // Cập nhật thông tin user
+    user.name = name || user.name;
+    user.dateOfBirth = dateOfBirth || user.dateOfBirth;
+    user.phoneNumber = phoneNumber || user.phoneNumber;
+    user.province = province || user.province;
+    user.city = city || user.city;
+    user.address = address || user.address;
+    user.country = country || user.country;
+    user.avatar = avatarPath;
+
+    await user.save();
+
+    res.status(200).json({ message: 'Profile updated successfully', user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error updating profile', error });
+  }
 }
 
 
 
 
-module.exports = { registerUser, loginUser, sendOtp, resetPassword, profile, createSavingAccount};
+module.exports = { registerUser, loginUser, sendOtp, resetPassword, profile, editProfile};

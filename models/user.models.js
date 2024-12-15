@@ -44,6 +44,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  avatar: {
+    type: DataTypes.STRING, // Avatar URL hoặc path
+    allowNull: true,
+    defaultValue: null, // Giá trị mặc định nếu không có avatar
+  }
 }, {
   timestamps: true,
   tableName: 'Users',
