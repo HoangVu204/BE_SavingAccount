@@ -7,13 +7,14 @@ const bcrypt = require('bcrypt');
 const { generateOtp } = require('../../services/otp.service.js');
 const { sendMail } = require('../../config/mailConfig.js');
 const { generateToken } = require('../../config/jwtConfig.js');
+const path = require('path');
 
 
 //[POST] /auth/register
-
 const registerUser = async (req, res) => {
+
   const { name, email, password, dateOfBirth, phoneNumber, province, city, address, country } = req.body;
-  if (!name || !email || !password) {
+  if (!name || !email || !password || !dateOfBirth || !phoneNumber || !province || !city || !address || !country) {
     return res.status(400).json({ message: 'Please provide all required information' });
   }
 
@@ -25,7 +26,7 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userRole = await Role.findOne({ where: { name: 'user' } });
-
+   
     const user = await User.create({
       name,
       email,
@@ -36,8 +37,9 @@ const registerUser = async (req, res) => {
       city,
       address,
       country,
-      avatar: avatar || null,
+      avatar: null,
     });
+
     await UserRoles.create({
       userId: user.id,
       roleId: userRole.id
@@ -118,7 +120,7 @@ const resetPassword = async (req, res) => {
 
 
 
-
+//[GET] /profile
 const profile = async (req, res) => {
   // res.status(200).json({ message: 'You are authenticated!', user: req.user });
   try {
@@ -142,6 +144,8 @@ const profile = async (req, res) => {
   }
 };
 
+
+
 const editProfile = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -163,7 +167,6 @@ const editProfile = async (req, res) => {
       avatarPath = req.file.filename;
     }
 
-    // Cập nhật thông tin user
     user.name = name || user.name;
     user.dateOfBirth = dateOfBirth || user.dateOfBirth;
     user.phoneNumber = phoneNumber || user.phoneNumber;
