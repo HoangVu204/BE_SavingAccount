@@ -8,6 +8,7 @@ const { generateOtp } = require('../../services/otp.service.js');
 const { sendMail } = require('../../config/mailConfig.js');
 const { generateToken } = require('../../config/jwtConfig.js');
 const path = require('path');
+const fs = require('fs'); 
 
 
 //[POST] /auth/register
@@ -145,45 +146,65 @@ const profile = async (req, res) => {
 };
 
 
-
+//[PATCH] /profile/edit
 const editProfile = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { name, dateOfBirth, phoneNumber, province, city, address, country } = req.body;
+  const { name, email, password, dateOfBirth, phoneNumber, province, city, address, country } = req.body;
+  const avatar = req.file ? req.file.path : null;
 
+  if (!name && !email && !password && !dateOfBirth && !phoneNumber && !province && !city && !address && !country && !avatar) {
+    return res.status(400).json({ message: 'Please provide at least one field to update' });
+  }
+
+  try {
+    const userId = req.user.id; 
     const user = await User.findByPk(userId);
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    let avatarPath = user.avatar;
-    if (req.file) {
-      if (user.avatar) {
-        const oldAvatarPath = path.join(__dirname, '../avatars', user.avatar);
-        if (fs.existsSync(oldAvatarPath)) {
-          fs.unlinkSync(oldAvatarPath); 
-        }
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ where: { email } });
+      if (emailExists) {
+        return res.status(400).json({ message: 'Email already exists' });
       }
-      avatarPath = req.file.filename;
     }
 
-    user.name = name || user.name;
-    user.dateOfBirth = dateOfBirth || user.dateOfBirth;
-    user.phoneNumber = phoneNumber || user.phoneNumber;
-    user.province = province || user.province;
-    user.city = city || user.city;
-    user.address = address || user.address;
-    user.country = country || user.country;
-    user.avatar = avatarPath;
+    let hashedPassword = user.password;
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+      }
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
 
-    await user.save();
+    await user.update({
+      name: name || user.name,
+      email: email || user.email,
+      password: hashedPassword,
+      dateOfBirth: dateOfBirth || user.dateOfBirth,
+      phoneNumber: phoneNumber || user.phoneNumber,
+      province: province || user.province,
+      city: city || user.city,
+      address: address || user.address,
+      country: country || user.country,
+      avatar: avatar || user.avatar,
+    });
 
-    res.status(200).json({ message: 'Profile updated successfully', user });
+    const { password: _, ...userWithoutPassword } = user.toJSON();
+
+    res.status(200).json({ message: 'Profile updated successfully', user: userWithoutPassword });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error updating profile', error });
+    res.status(500).json({ message: 'Failed to update profile', error });
   }
-}
+};
+
+module.exports = { editProfile };
+
+
+
+  
 
 
 

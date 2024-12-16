@@ -15,7 +15,7 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: "avatar", // Folder name in Cloudinary
+        folder: "avatar",
         format: async (req, file) => "png",
         public_id: (req, file) => file.originalname.split(".")[0],
     },
