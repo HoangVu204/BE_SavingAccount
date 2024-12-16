@@ -6,7 +6,7 @@ const validate = require('../../middlewares/validdateData.middleware.js')
 const { cloudinary, storage, upload } = require('../../config/cloundinaryConfig.js')
 
 
-router.post('/register', validate.validateDataRegisterMiddleware, userController.registerUser);
+router.post('/register', validate.validateDataRegister, userController.registerUser);
 
 router.post('/login', userController.loginUser);    
 
@@ -15,6 +15,6 @@ router.post('/reset-password', userController.resetPassword);
 
 router.get('/profile',authMiddlewares.authenticate, userController.profile);
 
-router.patch('/profile/edit', authMiddlewares.authenticate, upload.single("avatar"), userController.editProfile);
+router.patch('/profile/edit', authMiddlewares.authenticate, validate.validateDataEditProifile, upload.single("avatar"), userController.editProfile);
 
 module.exports = router;

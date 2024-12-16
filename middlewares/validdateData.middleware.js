@@ -1,6 +1,6 @@
 const validateData = require('../utils/validateData.util.js')
 
-const validateDataRegisterMiddleware = (req, res, next) => {
+const validateDataRegister = (req, res, next) => {
   const errorMessage = validateData.validateDataRegister(req.body);
 
   if (errorMessage) {
@@ -10,4 +10,14 @@ const validateDataRegisterMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = {validateDataRegisterMiddleware}
+const validateDataEditProifile = (req, res, next) => {
+  const errorMessage = validateData.validateDataEditProfile(req.body);
+
+  if (errorMessage) {
+    return res.status(400).json({ message: errorMessage });
+  }
+
+  next();
+};
+
+module.exports = {validateDataRegister,validateDataEditProifile}
