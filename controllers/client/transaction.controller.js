@@ -2,140 +2,138 @@ const Transaction = require('../../models/transaction.model');
 const TransactionDetail = require('../../models/transactionDetail.model');
 const SavingAccount = require('../../models/savingAccount.model');
 const SavingType = require('../../models/savingType.model');
-const { Op } = require('sequelize');
 
 const depositMoney = async (req, res) => {
   try {
-    const { AccountID, Amount, Description } = req.body;
+    const { AccountID, Amount } = req.body;
 
-    if (Amount <= 0) {
-      return res.status(400).json({ error: 'Deposit amount must be greater than 0' });
-    }
-
-    const account = await SavingAccount.findByPk(AccountID);
-    if (!account) {
-      return res.status(404).json({ error: 'Saving account not found' });
-    }
-
-    await sequelize.transaction(async (t) => {
-      const transaction = await Transaction.create({
-        AccountID,
-        TransactionDate: new Date(),
-      }, { transaction: t });
-
-      await TransactionDetail.create({
-        TransactionID: transaction.TransactionID,
-        TransactionType: 'Deposit',
-        Amount,
-        Description,
-      }, { transaction: t });
-
-      account.Balance += parseFloat(Amount);
-      await account.save({ transaction: t });
+    const savingAccount = await SavingAccount.findByPk(AccountID, {
+      include: [SavingType],
     });
 
-    return res.status(201).json({ message: 'Deposit successful' });
+    if (!savingAccount) {
+      return res.status(404).json({ error: 'Saving account not found!' });
+    }
+
+
+    //QĐ2: Chỉ nhận gởi tiền với loại tiết kiệm không kỳ hạn. Số tiền gởi thêm tối thiểu là 100.000
+    if (savingAccount.SavingType.TypeName !== 'Không kỳ hạn') {
+      return res.status(400).json({
+        error: 'Deposits are only allowed for non-term savings!',
+      });
+    }
+    if (Amount < 100000) {
+      return res.status(400).json({
+        error: 'The deposit amount must be at least 100,000!',
+      });
+    }
+
+    const newBalance = savingAccount.Balance + Amount;
+    await savingAccount.update({ Balance: newBalance });
+
+    const transaction = await Transaction.create({
+      AccountID: savingAccount.AccountID,
+      TransactionType: 'Deposit',
+      TransactionDate: new Date(),
+      Amount: Amount,
+    });
+
+    return res.status(200).json({
+      message: 'Deposit successful!',
+      transaction,
+      newBalance,
+    });
   } catch (error) {
     console.error('Error during deposit:', error);
-    return res.status(500).json({ error: 'An error occurred during the deposit process' });
+    return res.status(500).json({
+      error: 'An error occurred while processing the deposit.',
+    });
   }
 };
+
 
 const withdrawMoney = async (req, res) => {
   try {
-    const { AccountID, Amount, Description } = req.body;
+    const { AccountID, Amount } = req.body;
 
-    const account = await SavingAccount.findOne({
-      where: { AccountID },
-      include: SavingType, 
+    const savingAccount = await SavingAccount.findByPk(AccountID, {
+      include: [SavingType],
     });
 
-    if (!account) {
-      return res.status(404).json({ error: 'Saving account not found' });
+    if (!savingAccount) {
+      return res.status(404).json({ error: 'Saving account not found!' });
     }
 
-    const today = new Date();
-    const openingDate = new Date(account.OpeningDate);
-    const daysSinceOpening = Math.floor((today - openingDate) / (1000 * 60 * 60 * 24));
+    const daysSinceOpening = (new Date() - new Date(savingAccount.OpeningDate)) / (1000 * 3600 * 24);
 
-    const savingType = account.SavingType;
-    const isFixedTerm = savingType.DurationInDays > 0; 
+    if (savingAccount.SavingType.TypeName === 'Có kỳ hạn') {
 
-    if (daysSinceOpening < 15) {
-      return res.status(400).json({ error: 'You can only withdraw after at least 15 days since opening the account.' });
-    }
-
-    if (isFixedTerm) {
-      const termEndDate = new Date(openingDate);
-      termEndDate.setDate(termEndDate.getDate() + savingType.DurationInDays);
-
-      if (today < termEndDate) {
-        return res.status(400).json({ error: 'You can only withdraw after the term has ended.' });
+      if (daysSinceOpening < savingAccount.SavingType.DurationInDays) {
+        return res.status(400).json({
+          error: 'Withdrawal is only allowed after the term has ended and for the full amount!',
+        });
       }
 
-      if (Amount !== account.Balance) {
-        return res.status(400).json({ error: 'For fixed-term savings, you must withdraw the full balance.' });
+      const interestRate = savingAccount.SavingType.InterestRate;
+      const durationInDays = savingAccount.SavingType.DurationInDays;
+
+      let interest = (savingAccount.Balance * interestRate * (daysSinceOpening / durationInDays));
+
+      const totalAmount = savingAccount.Balance + interest;
+
+      if (Amount !== totalAmount) {
+        return res.status(400).json({
+          error: 'You must withdraw the full balance plus interest for term deposits!',
+        });
+      }
+    } else if (savingAccount.SavingType.TypeName === 'Không kỳ hạn') {
+      if (daysSinceOpening < 30) {
+        return res.status(400).json({
+          error: 'Deposit must be held for at least 1 month to earn interest!',
+        });
+      } 
+
+      const interestRate = savingAccount.SavingType.InterestRate;
+
+      const interest = (savingAccount.Balance * interestRate);
+
+      if (Amount > savingAccount.Balance) {
+        return res.status(400).json({
+          error: 'Insufficient funds to withdraw!',
+        });
       }
 
-      const fullTermCount = Math.floor(daysSinceOpening / savingType.DurationInDays);
-      const interestRate =
-        savingType.DurationInDays === 90 ? 0.005 : 
-        savingType.DurationInDays === 180 ? 0.0055 :
-        0;
+      const newBalance = savingAccount.Balance - Amount;
+      await savingAccount.update({ Balance: newBalance });
 
-      const interest = fullTermCount * interestRate * savingType.DurationInDays * account.Balance;
+      const transaction = await Transaction.create({
+        AccountID: savingAccount.AccountID,
+        TransactionType: 'Withdrawal',
+        TransactionDate: new Date(),
+        Amount: Amount,
+      });
 
-      const totalWithdraw = account.Balance + interest;
+      if (newBalance === 0) {
+        await savingAccount.update({ Status: 'closed' });
+      }
 
-      await processWithdrawal(AccountID, totalWithdraw, 'Withdrawal after fixed term', res, account);
+      return res.status(200).json({
+        message: 'Withdrawal successful!',
+        transaction,
+        newBalance,
+        interest,
+      });
     } else {
-      if (Amount > account.Balance) {
-        return res.status(400).json({ error: 'You cannot withdraw more than your current balance.' });
-      }
-
-      let interest = 0;
-      if (daysSinceOpening >= 30) {
-        interest = account.Balance * 0.0015; 
-      }
-
-      const remainingBalance = account.Balance - Amount;
-
-      await processWithdrawal(AccountID, Amount, Description, res, account, interest, remainingBalance);
+      return res.status(400).json({
+        error: 'Invalid saving type for withdrawal!',
+      });
     }
   } catch (error) {
     console.error('Error during withdrawal:', error);
-    return res.status(500).json({ error: 'An error occurred during the withdrawal process.' });
+    return res.status(500).json({
+      error: 'An error occurred while processing the withdrawal.',
+    });
   }
 };
 
-const processWithdrawal = async (AccountID, Amount, Description, res, account, interest = 0, remainingBalance = 0) => {
-  await sequelize.transaction(async (t) => {
-    
-    const transaction = await Transaction.create({
-      AccountID,
-      TransactionDate: new Date(),
-    }, { transaction: t });
-
-    await TransactionDetail.create({
-      TransactionID: transaction.TransactionID,
-      TransactionType: 'Withdrawal',
-      Amount,
-      Description,
-    }, { transaction: t });
-
-    if (remainingBalance <= 0) {
-      account.Status = 'closed';
-    } else {
-      account.Balance = remainingBalance + interest;
-    }
-    await account.save({ transaction: t });
-
-    const message = remainingBalance <= 0
-      ? 'Withdrawal successful. Your account is now closed.'
-      : 'Withdrawal successful.';
-
-    res.status(201).json({ message, interest, remainingBalance: account.Balance });
-  });
-};
-
-module.exports = {depositMoney , withdrawMoney}
+module.exports = { depositMoney, withdrawMoney };

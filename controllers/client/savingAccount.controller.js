@@ -5,7 +5,7 @@ const SavingAccount = require('../../models/savingAccount.model')
 const createSavingAccount = async (req, res) => {
   try {
     const { UserID, SavingTypeID, InitialDeposit } = req.body;
-    
+
     const savingType = await SavingType.findByPk(SavingTypeID);
     if (!savingType) {
       return res.status(404).json({ error: 'Saving type does not exist!' });
@@ -23,7 +23,6 @@ const createSavingAccount = async (req, res) => {
       OpeningDate: new Date(),
       Balance: InitialDeposit,
       Status: 'active',
-
       originalDurationInDays: savingType.DurationInDays, 
       originalInterestRate: savingType.InterestRate,
     });
@@ -39,7 +38,7 @@ const createSavingAccount = async (req, res) => {
 };
 
 // [GET] /api/saving-account/:userId?skip=0&limit=10
-const getAccount = async (req, res) => {
+const getSavingAccount = async (req, res) => {
   try {
     const { userId } = req.params; 
     const { skip = 0, limit = 10 } = req.query;
@@ -68,4 +67,4 @@ const getAccount = async (req, res) => {
   }
 };
 
-module.exports = {createSavingAccount, getAccount}
+module.exports = {createSavingAccount, getSavingAccount}
