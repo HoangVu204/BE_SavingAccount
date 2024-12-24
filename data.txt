@@ -1,0 +1,81 @@
+CREATE TABLE Users (
+  id INT PRIMARY KEY IDENTITY(1,1),            
+  name NVARCHAR(255) NOT NULL,                 
+  email NVARCHAR(255) NOT NULL UNIQUE,         
+  password NVARCHAR(255) NOT NULL,             
+  dateOfBirth DATE,                             
+  phoneNumber NVARCHAR(15),                    
+  province NVARCHAR(255),                       
+  city NVARCHAR(255),                          
+  address NVARCHAR(255),                       
+  country NVARCHAR(255), 
+  avartar NVARCHAR(255),                       
+  createdAt DATETIME2 DEFAULT GETDATE(),        
+  updatedAt DATETIME2 DEFAULT GETDATE(),        
+  CONSTRAINT CK_Users_Email CHECK (email LIKE '%@%')
+);
+
+CREATE TABLE PasswordResets (
+  id INT PRIMARY KEY IDENTITY(1,1),
+  email NVARCHAR(255) NOT NULL,
+  otp NVARCHAR(6) NOT NULL,              
+  expiration DATETIME2 NOT NULL,          
+  createdAt DATETIME2 DEFAULT GETDATE(), 
+  CONSTRAINT FK_PasswordResets_Users FOREIGN KEY (email) REFERENCES Users(email)
+);
+
+CREATE TABLE Roles (
+  id INT PRIMARY KEY IDENTITY(1,1),
+  name NVARCHAR(50) NOT NULL
+);
+
+CREATE TABLE UserRoles (
+  userId INT,
+  roleId INT,
+  FOREIGN KEY (userId) REFERENCES Users(id),
+  FOREIGN KEY (roleId) REFERENCES Roles(id),
+  PRIMARY KEY (userId, roleId)
+);
+
+CREATE TABLE Permissions (
+    PermissionID INT PRIMARY KEY IDENTITY(1,1),
+    PermissionName VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE RolePermissions (
+    RoleID INT NOT NULL,
+    PermissionID INT NOT NULL,
+    PRIMARY KEY (RoleID, PermissionID),
+    FOREIGN KEY (RoleID) REFERENCES Roles(ID) ON DELETE CASCADE,
+    FOREIGN KEY (PermissionID) REFERENCES Permissions(PermissionID) ON DELETE CASCADE
+);
+
+
+CREATE TABLE SavingType (
+    SavingTypeID INT IDENTITY PRIMARY KEY, -- Mã loại tiết kiệm
+    TypeName NVARCHAR(100) NOT NULL,      -- Tên loại (Không kỳ hạn, 3 tháng, 6 tháng)
+    DurationInDays INT,                   -- Số ngày kỳ hạn (NULL nếu không kỳ hạn)
+    InterestRate DECIMAL(5, 3) NOT NULL,  -- Lãi suất (%)
+    MinDeposit DECIMAL(18, 2) NOT NULL    -- Số tiền gửi tối thiểu
+);
+
+CREATE TABLE SavingAccount (
+    AccountID INT IDENTITY PRIMARY KEY,  -- Mã sổ tiết kiệm
+    UserID INT NOT NULL,             -- Mã khách hàng (FK)
+    SavingTypeID INT NOT NULL,           -- Loại tiết kiệm (FK)
+    OpeningDate DATETIME NOT NULL,       -- Ngày mở sổ
+    Balance DECIMAL(18, 2) NOT NULL,     -- Số dư hiện tại
+    Status NVARCHAR(50) DEFAULT 'active', -- Trạng thái (Hoạt động, Đóng)
+ChangedBy NVARCHAR(100),  -- Người thực hiện thay đổi
+    FOREIGN KEY (UserID) REFERENCES Users(id),
+    FOREIGN KEY (SavingTypeID) REFERENCES SavingType(SavingTypeID)
+);
+
+
+
+INSERT INTO Roles (name) VALUES
+('admin'),
+('user');
+
+
+

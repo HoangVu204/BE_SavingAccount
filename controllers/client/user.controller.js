@@ -10,15 +10,11 @@ const { generateToken } = require('../../config/jwtConfig.js');
 const path = require('path');
 const fs = require('fs'); 
 
-
-//[POST] /auth/register
+//[POST] /register
 const registerUser = async (req, res) => {
 
   const { name, email, password, dateOfBirth, phoneNumber, province, city, address, country } = req.body;
-  if (!name || !email || !password || !dateOfBirth || !phoneNumber || !province || !city || !address || !country) {
-    return res.status(400).json({ message: 'Please provide all required information' });
-  }
-
+  
   try {
     const userExists = await User.findOne({ where: { email } });
     if (userExists) {
@@ -27,6 +23,10 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userRole = await Role.findOne({ where: { name: 'user' } });
+    
+    if (!userRole) {
+      userRole = await Role.create({ name: 'user' });
+    }
    
     const user = await User.create({
       name,
@@ -47,7 +47,7 @@ const registerUser = async (req, res) => {
     });
 
 
-    const token = generateToken({ id: user.id, email: user.email, roles: ['user'] });
+    const token = generateToken({ id: user.id, email: user.email, roles: userRole.name });
 
     res.status(201).json({ message: 'Registration successful', token });
   } catch (error) {
@@ -55,8 +55,7 @@ const registerUser = async (req, res) => {
   }
 };
 
-
-//[POST] /auth/login
+//[POST] /login
 const loginUser = async (req, res) => {
   const { email, password } = req.body; 
 
@@ -75,8 +74,7 @@ const loginUser = async (req, res) => {
   }
 };
 
-
-//[POST] /auth/forgot-password
+//[POST] /forgot-password
 const sendOtp = async (req, res) => {
   const { email } = req.body;
   try {
@@ -98,8 +96,7 @@ const sendOtp = async (req, res) => {
   }
 };
 
-
-//[POST] /auth/reset-password
+//[POST] /reset-password
 const resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
 
@@ -118,8 +115,6 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: 'An error occurred while resetting the password.', error });
   }
 };
-
-
 
 //[GET] /profile
 const profile = async (req, res) => {

@@ -4,7 +4,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '1h';
 
 const generateToken = (user) => {
-  // Ensure that 'user.roles' exists and is an array
   const roles = user.roles && Array.isArray(user.roles) 
     ? user.roles.map(role => role.name) 
     : [];

@@ -30,4 +30,28 @@ const getRoles = async (req, res) => {
   }
 };
 
-module.exports = {createRole, getRoles}
+//[DELETE] /api/roles/:id
+const deleteRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: 'Role ID is required.' });
+    }
+
+    const role = await Role.findByPk(id);
+
+    if (!role) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    await role.destroy();
+
+    return res.status(200).json({ message: 'Role deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting role:', error.message);
+    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+};
+
+module.exports = {createRole, getRoles, deleteRole}

@@ -1,8 +1,7 @@
 const SavingType = require('../../models/savingType.model')
 const SavingAccount = require('../../models/savingAccount.model')
 
-//[POST] /create
-
+//[POST] saving-account/create
 const createSavingAccount = async (req, res) => {
   try {
     const { UserID, SavingTypeID, InitialDeposit } = req.body;
