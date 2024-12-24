@@ -1,6 +1,8 @@
 const SavingType = require('../../models/savingType.model')
 const SavingAccount = require('../../models/savingAccount.model')
-// const { sequelize } = require('../../config/dbConfig');
+const { sequelize } = require('../../config/dbConfig');
+const {Sequelize, DataTypes } = require('sequelize');
+const User = require('../../models/user.models')
 
 //[POST] /api/saving-account/create
 const createSavingAccount = async (req, res) => {
@@ -12,12 +14,12 @@ const createSavingAccount = async (req, res) => {
       return res.status(404).json({ error: 'Saving type does not exist!' });
     }
 
-    console.log(savingType.MinDeposit)
     if (InitialDeposit < savingType.MinDeposit) {
       return res.status(400).json({
         error: `The deposit amount must be greater than or equal to ${savingType.MinDeposit}!`,
       });
     }
+
     const newSavingAccount = await SavingAccount.create({
       UserID,
       SavingTypeID,
@@ -39,17 +41,28 @@ const createSavingAccount = async (req, res) => {
 };
 
 // [GET] /api/saving-account/:userId?skip=0&limit=10
-const getSavingAccount = async (req, res) => {
+const getSavingAccount = async (req, res) => { 
   try {
     const { userId } = req.params;
     const { skip = 0, limit = 10 } = req.query;
 
     const accounts = await SavingAccount.findAll({
+      attributes: [
+        'AccountID', 
+        'SavingTypeID', 
+        'Balance', 
+        [Sequelize.col('User.Name'), 'UserName']
+      ],
       where: { UserID: userId },
       offset: parseInt(skip),
       limit: parseInt(limit),
       order: [['AccountID', 'ASC']],
+      include: [{
+        model: User,
+        attributes: [] 
+      }]
     });
+
     console.log(accounts); // Log kết quả
     if (accounts.length === 0) {
       return res.status(404).json({ error: 'No saving accounts found for this user!' });
@@ -68,5 +81,7 @@ const getSavingAccount = async (req, res) => {
     return res.status(500).json({ error: 'An error occurred while fetching saving accounts.' });
   }
 };
+
+
 
 module.exports = {createSavingAccount, getSavingAccount}

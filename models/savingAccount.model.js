@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const {sequelize} = require('../config/dbConfig');
 const SavingType = require('./savingType.model');
+const User = require('./user.models');
 
 const SavingAccount = sequelize.define('SavingAccount', {
   AccountID: {
@@ -46,5 +47,6 @@ const SavingAccount = sequelize.define('SavingAccount', {
 });
 
 SavingAccount.belongsTo(SavingType, { foreignKey: 'SavingTypeID' });
+SavingAccount.belongsTo(User, { foreignKey: 'UserID' });
 
 module.exports = SavingAccount;
