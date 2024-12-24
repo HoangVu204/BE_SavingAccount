@@ -2,6 +2,8 @@ const { verifyToken } = require('../config/jwtConfig');
 const { sequelize } = require('../config/dbConfig');
 const User = require('../models/user.models');
 const Role = require('../models/role.model');
+const Permission = require('../models/permission.model');
+const RolePermission = require('../models/rolePermissions.model');
 const jwt = require('jsonwebtoken');
 
 // Middleware authenticate
@@ -23,32 +25,46 @@ const authenticate = (req, res, next) => {
 };
 
 // Middleware authorize
-const authorize = () => {
-  return (req, res, next) => {
+const authorize = (requiredPermissions) => {
+  return async (req, res, next) => {
     try {
-      const Roles = req.user?.roles;
-
-      if (!Roles) {
-        return res.status(403).json({ message: 'No roles found in user data.' });
+      const user = req.user; 
+      if (!user || !user.id) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      const roles = user.roles;
+      if (!roles || roles.length === 0) {
+        return res.status(403).json({ message: 'No roles assigned to user' });
       }
 
-       //------------------------------Permission--------------------------------------
-      // Kiểm tra xem các role của user có phù hợp với quyền yêu cầu không
-      //-------------------------------------------------------------------------------
+      const permissions = await RolePermission.findAll({
+        where: {
+          RoleID: roles,
+        },
+        include: {
+          model: Permission,
+          attributes: ['PermissionName'],
+        }
+      });
 
-      // Nếu bạn muốn kiểm tra tất cả các role của user, thì chỉ cần so sánh với array `requiredRoles`
-      const hasPermission = Roles.some(role => role === 'Admin'); // Ví dụ: kiểm tra xem user có vai trò Admin không
+      console.log(permissions)
+
+
+      const userPermissions = permissions.map(permission => permission.Permission.PermissionName);
+
+      const hasPermission = requiredPermissions.every(permission => userPermissions.includes(permission));
 
       if (!hasPermission) {
-        return res.status(403).json({ message: 'Access denied.' });
+        return res.status(403).json({ message: 'You do not have permission to perform this action.' });
       }
 
       next();
     } catch (error) {
-      console.error(error); // Ghi lỗi để debug
-      return res.status(500).json({ message: 'Internal server error.' });
+      console.error('Authorization error:', error.message);
+      return res.status(500).json({ message: 'Internal Server Error' });
     }
   };
 };
+
 
 module.exports = { authenticate, authorize };

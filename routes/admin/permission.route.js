@@ -4,7 +4,7 @@ const permissionController = require('../../controllers/admin/permission.control
 
 const router = express.Router();
 
-router.post('/', permissionController.createPermission);
+router.post('/create', permissionController.createPermission);
 router.get('/', permissionController.getPermissions);
 
 

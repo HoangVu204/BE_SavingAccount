@@ -46,8 +46,7 @@ const registerUser = async (req, res) => {
       roleId: userRole.id
     });
 
-
-    const token = generateToken({ id: user.id, email: user.email, roles: userRole.name });
+    const token = generateToken({ id: user.id, email: user.email, roles: userRole.id });
 
     res.status(201).json({ message: 'Registration successful', token });
   } catch (error) {
@@ -63,7 +62,10 @@ const loginUser = async (req, res) => {
     const user = await User.findOne({ where: { email } });
     if (user && (await bcrypt.compare(password, user.password))) {
 
-      const token = generateToken({ id: user.id, email: user.email });
+      const roles = await user.getRoles();
+      const roleids = roles.map(role => role.id);
+      const token = generateToken({ id: user.id, email: user.email , roles: roleids });
+
       res.status(200).json({ message: 'Login successful', token });
 
     } else {
