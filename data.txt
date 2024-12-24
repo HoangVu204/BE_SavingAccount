@@ -66,7 +66,6 @@ CREATE TABLE SavingAccount (
     OpeningDate DATETIME NOT NULL,       -- Ngày mở sổ
     Balance DECIMAL(18, 2) NOT NULL,     -- Số dư hiện tại
     Status NVARCHAR(50) DEFAULT 'active', -- Trạng thái (Hoạt động, Đóng)
-ChangedBy NVARCHAR(100),  -- Người thực hiện thay đổi
     FOREIGN KEY (UserID) REFERENCES Users(id),
     FOREIGN KEY (SavingTypeID) REFERENCES SavingType(SavingTypeID)
 );

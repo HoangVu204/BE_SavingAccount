@@ -1,28 +1,31 @@
 const SavingType = require('../../models/savingType.model')
 const SavingAccount = require('../../models/savingAccount.model')
 
-//[POST] saving-account/create
+//[POST] /api/saving-account/create
 const createSavingAccount = async (req, res) => {
   try {
     const { UserID, SavingTypeID, InitialDeposit } = req.body;
-
+    
     const savingType = await SavingType.findByPk(SavingTypeID);
     if (!savingType) {
       return res.status(404).json({ error: 'Saving type does not exist!' });
     }
+
 
     if (InitialDeposit < savingType.MinDeposit) {
       return res.status(400).json({
         error: `The deposit amount must be greater than or equal to ${savingType.MinDeposit}!`,
       });
     }
-
     const newSavingAccount = await SavingAccount.create({
       UserID,
       SavingTypeID,
-      OpeningDate: new Date(), 
+      OpeningDate: new Date(),
       Balance: InitialDeposit,
       Status: 'active',
+
+      originalDurationInDays: savingType.DurationInDays, 
+      originalInterestRate: savingType.InterestRate,
     });
 
     return res.status(201).json({
@@ -35,8 +38,7 @@ const createSavingAccount = async (req, res) => {
   }
 };
 
-
-// [GET] /saving-account/:userId?skip=0&limit=10
+// [GET] /api/saving-account/:userId?skip=0&limit=10
 const getAccount = async (req, res) => {
   try {
     const { userId } = req.params; 

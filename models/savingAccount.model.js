@@ -32,6 +32,14 @@ const SavingAccount = sequelize.define('SavingAccount', {
     type: DataTypes.STRING(50),
     defaultValue: 'Hoạt động', 
   },
+  originalDurationInDays: {
+    type: DataTypes.INTEGER, 
+    allowNull: false, 
+  },
+  originalInterestRate: {
+    type: DataTypes.DECIMAL(5, 3), 
+    allowNull: false, 
+  },
 }, {
   tableName: 'SavingAccount', 
   timestamps: false, 

@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.use('/', userRoutes);
 router.use('/saving-account', savingAccountRoutes);
-router.use('/transaction', transactionRoutes)
+router.use('/transaction', transactionRoutes);
+
 
 module.exports = router;

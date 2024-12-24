@@ -1,9 +1,16 @@
 const  Role  = require('../../models/role.model');
 
+
+//[POST] /api/admin/roles/create
 const createRole = async (req, res) => {
   try {
     const { name } = req.body;
 
+    const roleExists = await Role.findOne({where: {name}});
+    if(roleExists){
+      return res.status(400).json({message:'Role alrealy exists'}); 
+    }
+    
     if (!name) {
       return res.status(400).json({ message: 'Role name is required.' });
     }
@@ -17,6 +24,8 @@ const createRole = async (req, res) => {
   }
 };
 
+
+//[GET] /api/admin/roles
 const getRoles = async (req, res) => {
   try {
     const roles = await Role.findAll();
