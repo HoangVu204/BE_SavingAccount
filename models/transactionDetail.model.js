@@ -1,5 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/dbConfig');
+const Transaction = require('./transaction.model');
+
 
 const TransactionDetail = sequelize.define('TransactionDetail', {
   DetailID: {
@@ -32,5 +34,8 @@ const TransactionDetail = sequelize.define('TransactionDetail', {
   tableName: 'TransactionDetail',
   timestamps: false,
 });
+
+Transaction.hasMany(TransactionDetail, { foreignKey: 'TransactionID' });
+TransactionDetail.belongsTo(Transaction, { foreignKey: 'TransactionID' });
 
 module.exports = TransactionDetail;

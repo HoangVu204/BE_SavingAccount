@@ -1,5 +1,5 @@
 const Transaction = require('../../models/transaction.model');
-const TransactionDetail = require('../../models/transactionDetail.model');
+const TransactionDetail = require('../../models/transactionDetail.model'); 
 const SavingAccount = require('../../models/savingAccount.model');
 const SavingType = require('../../models/savingType.model');
 
@@ -15,9 +15,8 @@ const depositMoney = async (req, res) => {
       return res.status(404).json({ error: 'Saving account not found!' });
     }
 
-
-    //QĐ2: Chỉ nhận gởi tiền với loại tiết kiệm không kỳ hạn. Số tiền gởi thêm tối thiểu là 100.000
-    if (savingAccount.SavingType.TypeName !== 'Không kỳ hạn') {
+    // Only allow deposits for non-term savings accounts with a minimum amount of 100,000
+    if (savingAccount.SavingType.TypeName !== 'non-term') {
       return res.status(400).json({
         error: 'Deposits are only allowed for non-term savings!',
       });
@@ -35,7 +34,7 @@ const depositMoney = async (req, res) => {
       AccountID: savingAccount.AccountID,
       TransactionType: 'Deposit',
       TransactionDate: new Date(),
-      Amount: Amount,
+      Amount: Amount, 
     });
 
     return res.status(200).json({
@@ -51,10 +50,15 @@ const depositMoney = async (req, res) => {
   }
 };
 
-
 const withdrawMoney = async (req, res) => {
   try {
     const { AccountID, Amount } = req.body;
+
+    if (!AccountID || Amount === undefined || Amount <= 0) {
+      return res.status(400).json({
+        error: 'Invalid input! AccountID and Amount must be provided and Amount must be greater than 0.',
+      });
+    }
 
     const savingAccount = await SavingAccount.findByPk(AccountID, {
       include: [SavingType],
@@ -64,70 +68,92 @@ const withdrawMoney = async (req, res) => {
       return res.status(404).json({ error: 'Saving account not found!' });
     }
 
-    const daysSinceOpening = (new Date() - new Date(savingAccount.OpeningDate)) / (1000 * 3600 * 24);
+    const { OpeningDate, Balance, Status } = savingAccount;
+    const { TypeName, DurationInDays, InterestRate } = savingAccount.SavingType;
 
-    if (savingAccount.SavingType.TypeName === 'Có kỳ hạn') {
+    if (Status !== 'active') {
+      return res.status(400).json({ error: 'This account is no longer active!' });
+    }
 
-      if (daysSinceOpening < savingAccount.SavingType.DurationInDays) {
+    const currentDate = new Date();
+    const daysSinceOpening = Math.floor((currentDate - new Date(OpeningDate)) / (1000 * 60 * 60 * 24));
+
+    if (TypeName !== 'non-term') {
+      if (daysSinceOpening < DurationInDays) {
         return res.status(400).json({
-          error: 'Withdrawal is only allowed after the term has ended and for the full amount!',
+          error: 'Cannot withdraw from term savings before the term ends!',
         });
       }
 
-      const interestRate = savingAccount.SavingType.InterestRate;
-      const durationInDays = savingAccount.SavingType.DurationInDays;
-
-      let interest = (savingAccount.Balance * interestRate * (daysSinceOpening / durationInDays));
-
-      const totalAmount = savingAccount.Balance + interest;
-
-      if (Amount !== totalAmount) {
+      if (Amount !== Balance) {
         return res.status(400).json({
-          error: 'You must withdraw the full balance plus interest for term deposits!',
-        });
-      }
-    } else if (savingAccount.SavingType.TypeName === 'Không kỳ hạn') {
-      if (daysSinceOpening < 30) {
-        return res.status(400).json({
-          error: 'Deposit must be held for at least 1 month to earn interest!',
-        });
-      } 
-
-      const interestRate = savingAccount.SavingType.InterestRate;
-
-      const interest = (savingAccount.Balance * interestRate);
-
-      if (Amount > savingAccount.Balance) {
-        return res.status(400).json({
-          error: 'Insufficient funds to withdraw!',
+          error: 'For term savings, you must withdraw the full balance!',
         });
       }
 
-      const newBalance = savingAccount.Balance - Amount;
-      await savingAccount.update({ Balance: newBalance });
+      const termsCompleted = Math.floor(daysSinceOpening / DurationInDays);
+      const interest = termsCompleted * InterestRate * Balance;
+
+      await savingAccount.update({ Balance: 0, Status: 'closed' });
 
       const transaction = await Transaction.create({
-        AccountID: savingAccount.AccountID,
-        TransactionType: 'Withdrawal',
-        TransactionDate: new Date(),
-        Amount: Amount,
+        AccountID,
+        TransactionType: 'Withdraw',
+        TransactionDate: currentDate,
+        Amount: Balance + interest,
       });
 
-      if (newBalance === 0) {
-        await savingAccount.update({ Status: 'closed' });
-      }
+      // Thêm chi tiết giao dịch
+      await TransactionDetail.create({
+        TransactionID: transaction.TransactionID,
+        Description: `Withdrawal of ${Balance + interest} (including interest ${interest}) from account ${AccountID}`,
+      });
 
       return res.status(200).json({
         message: 'Withdrawal successful!',
-        transaction,
-        newBalance,
-        interest,
-      });
-    } else {
-      return res.status(400).json({
-        error: 'Invalid saving type for withdrawal!',
+        interestEarned: interest,
+        totalPayout: Balance + interest,
       });
     }
+
+    if (TypeName === 'non-term') {
+      if (Amount > Balance) {
+        return res.status(400).json({
+          error: 'Insufficient balance for the withdrawal!',
+        });
+      }
+
+      let interest = 0;
+      if (daysSinceOpening >= 30) {
+        interest = 0.0015 * Balance;
+      }
+
+      const newBalance = Balance - Amount;
+
+      await savingAccount.update({ Balance: newBalance, Status: newBalance === 0 ? 'closed' : 'active' });
+
+      const transaction = await Transaction.create({
+        AccountID,
+        TransactionType: 'Withdraw',
+        TransactionDate: currentDate,
+        Amount,
+      });
+
+      // Thêm chi tiết giao dịch
+      await TransactionDetail.create({
+        TransactionID: transaction.TransactionID,
+        Description: `Withdrawal of ${Amount} from account ${AccountID}. Interest earned: ${interest}`,
+      });
+
+      return res.status(200).json({
+        message: 'Withdrawal successful!',
+        interestEarned: interest,
+        remainingBalance: newBalance,
+        totalPayout: Amount + interest,
+      });
+    }
+
+    return res.status(400).json({ error: 'Invalid saving account type!' });
   } catch (error) {
     console.error('Error during withdrawal:', error);
     return res.status(500).json({

@@ -4,10 +4,11 @@ const dotenv = require('dotenv');
 const { connectDB }  = require('./config/dbConfig');
 const adminRoutes = require('./routes/admin/index.route')
 const clientRoutes = require('./routes/client/index.route')
-
+const cors = require('cors');
+const corsUtil = require('./utils/corsOptions.util')
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3002;
 
 dotenv.config();
 connectDB();
@@ -15,6 +16,7 @@ connectDB();
 // Middleware
 app.use(bodyParser.json());
 app.use(express.json());
+app.use(cors(corsUtil.corsOptions));
 
 
 // Routes
